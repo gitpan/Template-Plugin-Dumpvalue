@@ -6,7 +6,7 @@ use Dumpvalue;
 use IO::Scalar;
 use strict;
 
-our $VERSION = 1.0;
+our $VERSION = 1.01;
 
 sub new {
     my $class = shift;
@@ -21,8 +21,6 @@ sub new {
         output => '',
     };
 
-    tie *DUMP, 'IO::Scalar', \$self->{output};
-
     bless $self, $class;
 
     $self->set($hash);
@@ -33,14 +31,17 @@ sub new {
 sub dump_template_vars {
     my $self = shift;
 
-    return $self->{stash};
+    return $self->dumpValue($self->{stash});
 }
 
 sub grab_output {
     my $self = shift;
     my $code = shift;
 
-    $self->{output} = '';
+
+    my $output;
+    tie *DUMP, 'IO::Scalar', \$output;
+
     my $old_fh = select(DUMP);
 
     &{$code};
@@ -48,12 +49,12 @@ sub grab_output {
     select($old_fh);
 
     if($self->{inHTML}) {
-        $self->{output} =~ s/</&lt;/g;
-        $self->{output} =~ s/>/&gt;/g;
-        $self->{output} = "<pre>$self->{output}</pre>";
+        $output =~ s/</&lt;/g;
+        $output =~ s/>/&gt;/g;
+        $output = "<pre>$output</pre>";
     }
 
-    return $self->{output};
+    return $output;
 }
 
 sub dumpValue {
